@@ -27,6 +27,11 @@ extra-source-files:
     ChangeLog.md
     README.md
 
+source-repository this
+    type: git
+    location: https://github.com/ymdryo/path-sing
+    tag: v0.1.0
+
 library
     exposed-modules:
         Path.Sing
