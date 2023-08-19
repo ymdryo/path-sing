@@ -6,7 +6,10 @@ version:            0.1.0.0
 synopsis: A singleton wrapper for the `path` library.
 
 -- A longer description of the package.
-description: This library wraps the types in the `path` library with singleton types to allow more well-typed handling of file and directory paths.
+description:
+    This library wraps the types in the [@path@](https://hackage.haskell.org/package/path) library
+    with [singleton types](https://hackage.haskell.org/package/singletons) to allow more well-typed
+    handling of file and directory paths.
 
 -- A URL where users can report bugs.
 bug-reports: https://github.com/ymdryo/path-sing

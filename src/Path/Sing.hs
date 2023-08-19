@@ -8,23 +8,23 @@ import GHC.Generics (Generic)
 import Path (toFilePath)
 import Path qualified
 
--- | A DataKind that indicates whether the path is relative or absolute.
+-- | A DataKind that indicates whether the path is absolute or relative.
 data Base = Abs | Rel
 
 -- | A DataKind that indicates whether the path reveals a file or a directory.
 data FsType = File | Dir
 
--- | Mapping to tag representing the path's base in the Path library.
+-- | Mapping to the tag representing the path's base in the Path library.
 type family PathBase b where
     PathBase 'Abs = Path.Abs
     PathBase 'Rel = Path.Rel
 
--- | Mapping to tag representing the path's type in the Path library.
+-- | Mapping to the tag representing the path's type in the Path library.
 type family PathFsType t where
     PathFsType 'File = Path.File
     PathFsType 'Dir = Path.Dir
 
--- | A singleton tag that indicates whether the path is relative or absolute.
+-- | A singleton tag that indicates whether the path is absolute or relative.
 data SBase b where
     SAbs :: SBase 'Abs
     SRel :: SBase 'Rel
