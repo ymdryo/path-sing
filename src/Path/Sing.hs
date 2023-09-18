@@ -1,5 +1,16 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
+-- This Source Code Form is subject to the terms of the Mozilla Public
+-- License, v. 2.0. If a copy of the MPL was not distributed with this
+-- file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+{- |
+Copyright   :  (c) 2023 Yamada Ryo
+License     :  MPL-2.0 (see the file LICENSE)
+Maintainer  :  ymdfield@outlook.jp
+Stability   :  experimental
+Portability :  portable
+-}
 module Path.Sing where
 
 import Control.Exception (SomeException)
@@ -89,9 +100,9 @@ fileToDirPath (Path b SFile p) = case b of
     SRel -> convert Path.parseRelDir
     SAbs -> convert Path.parseAbsDir
   where
-    convert ::
-        (FilePath -> Either SomeException (Path.Path (PathBase b) Path.Dir)) ->
-        Path b 'Dir
+    convert
+        :: (FilePath -> Either SomeException (Path.Path (PathBase b) Path.Dir))
+        -> Path b 'Dir
     convert parseDir =
         case parseDir $ Path.toFilePath $ Path.filename p of
             Left e -> error $ "Failed to convert path type from file to directory: " <> show e

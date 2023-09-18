@@ -4,3 +4,6 @@ This library wraps the types in the [`path`](https://hackage.haskell.org/package
 
 [^1]: https://hackage.haskell.org/package/singletons
 [^2]: Dependently Typed Programming with Singletons, published at the Haskell Symposium, 2012. (https://richarde.dev/papers/2012/singletons/paper.pdf)
+
+## Your contributions are welcome!
+Please see [CONTRIBUTING.md](https://github.com/ymdryo/path-sing/blob/master/CONTRIBUTING.md).
