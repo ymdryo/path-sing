@@ -19,6 +19,7 @@ import Data.Hashable (Hashable (hashWithSalt), hashUsing)
 import GHC.Generics (Generic)
 import Language.Haskell.TH (Exp, Name, Q, appE, conE)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteExp)
+import Language.Haskell.TH.Syntax (Lift)
 import Path (toFilePath)
 import Path qualified
 
@@ -44,8 +45,9 @@ data SBase b where
     SRel :: SBase 'Rel
 
 deriving instance Show (SBase b)
-
 deriving instance Eq (SBase b)
+deriving instance Ord (SBase b)
+deriving instance Lift (SBase b)
 
 instance Hashable (SBase b) where
     hashWithSalt = hashUsing @Bool \case
@@ -58,8 +60,9 @@ data SFsType t where
     SDir :: SFsType 'Dir
 
 deriving instance Show (SFsType t)
-
 deriving instance Eq (SFsType b)
+deriving instance Ord (SFsType b)
+deriving instance Lift (SFsType b)
 
 instance Hashable (SFsType b) where
     hashWithSalt = hashUsing @Bool \case
@@ -69,7 +72,7 @@ instance Hashable (SFsType b) where
 -- | A singleton-type wrapper of the original Path type.
 data Path b t
     = Path (SBase b) (SFsType t) (Path.Path (PathBase b) (PathFsType t))
-    deriving stock (Generic, Eq)
+    deriving stock (Generic, Eq, Ord, Lift)
     deriving anyclass (Hashable)
 
 -- | Path of some type.
@@ -86,6 +89,8 @@ data SomeFsType b = forall t. SomeFsType (Path b t)
     directory is not distinguished here and is ambiguous.
 -}
 data UnknownFsType b = UnknownFsType (SBase b) (Path.Path (PathBase b) Path.File)
+    deriving (Generic, Eq, Ord, Lift)
+    deriving anyclass (Hashable)
 
 -- | Convert to a String.
 pathToString :: Path b t -> String
