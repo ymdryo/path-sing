@@ -16,6 +16,8 @@ module Path.Sing.Internal where
 
 import Control.Exception (SomeException)
 import Data.Hashable (Hashable (hashWithSalt), hashUsing)
+import Data.Text (Text)
+import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Language.Haskell.TH (Exp, Name, Q, appE, conE)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteExp)
@@ -92,9 +94,34 @@ data UnknownFsType b = UnknownFsType (SBase b) (Path.Path (PathBase b) Path.File
     deriving (Generic, Eq, Ord, Lift)
     deriving anyclass (Hashable)
 
+data SomeBaseUnknownFsType = forall b. SomeBaseUnknownFsType (UnknownFsType b)
+
 -- | Convert to a String.
 pathToString :: Path b t -> String
 pathToString (Path _ _ path) = toFilePath path
+
+-- | Convert to a Text.
+pathToText :: Path b t -> Text
+pathToText = T.pack . pathToString
+
+parseSomeDir :: FilePath -> Maybe (SomeBase 'Dir)
+parseSomeDir path =
+    Path.parseSomeDir path
+        >>= Just . \case
+            Path.Abs absDir -> SomeBase $ Path SAbs SDir absDir
+            Path.Rel relDir -> SomeBase $ Path SRel SDir relDir
+
+parseSomeFile :: FilePath -> Maybe (SomeBase 'File)
+parseSomeFile path =
+    Path.parseSomeFile path
+        >>= Just . \case
+            Path.Abs absFile -> SomeBase $ Path SAbs SFile absFile
+            Path.Rel relFile -> SomeBase $ Path SRel SFile relFile
+
+parseUnknownFsType :: FilePath -> Maybe SomeBaseUnknownFsType
+parseUnknownFsType path = do
+    SomeBase (Path b _ p) <- parseSomeFile path
+    Just $ SomeBaseUnknownFsType $ UnknownFsType b p
 
 -- | Append two paths.
 (</>) :: Path b 'Dir -> Path 'Rel t -> Path b t
