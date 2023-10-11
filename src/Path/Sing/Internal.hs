@@ -189,20 +189,11 @@ Reinterpret the path as a directory path.
 This can also be described as the action of appending a @\'/\'@ at the end.
 -}
 asDir :: forall b. UnknownFsType b -> Path b 'Dir
-asDir (UnknownFsType b p) = case b of
-    SRel -> convert Path.parseRelDir
-    SAbs -> convert Path.parseAbsDir
-  where
-    convert
-        :: (FilePath -> Either SomeException (Path.Path (PathBase b) Path.Dir))
-        -> Path b 'Dir
-    convert parseDir =
-        case parseDir $ Path.toFilePath $ Path.filename p of
-            Right p' -> Path b SDir p'
-            Left e ->
-                error $
-                    "impossible: Failed to convert path type from file to directory: "
-                        <> show e
+asDir (UnknownFsType b p) =
+    case Path.parseRelDir $ Path.toFilePath $ Path.filename p of
+        Right dirname -> Path b SDir (Path.parent p Path.</> dirname)
+        Left e ->
+            error $ "impossible: Failed to convert path type from file to directory: " <> show e
 
 {- |
 Reinterpret the path as a file path.
