@@ -97,13 +97,38 @@ data UnknownFsType b = UnknownFsType (SBase b) (Path.Path (PathBase b) Path.File
 
 data SomeBaseUnknownFsType = forall b. SomeBaseUnknownFsType (UnknownFsType b)
 
--- | Convert to a String.
-pathToString :: Path b t -> String
-pathToString (Path _ _ path) = toFilePath path
+class IsFilePath a where
+    -- | Convert to a String.
+    pathToString :: a -> String
 
--- | Convert to a Text.
-pathToText :: Path b t -> Text
-pathToText = T.pack . pathToString
+    -- | Convert to a Text.
+    pathToText :: a -> Text
+    pathToText = T.pack . pathToString
+    {-# INLINE pathToText #-}
+
+instance IsFilePath (Path b t) where
+    pathToString (Path _ _ path) = toFilePath path
+    {-# INLINE pathToString #-}
+
+instance IsFilePath SomePath where
+    pathToString (SomePath path) = pathToString path
+    {-# INLINE pathToString #-}
+
+instance IsFilePath (SomeBase t) where
+    pathToString (SomeBase path) = pathToString path
+    {-# INLINE pathToString #-}
+
+instance IsFilePath (SomeFsType b) where
+    pathToString (SomeFsType path) = pathToString path
+    {-# INLINE pathToString #-}
+
+instance IsFilePath (UnknownFsType b) where
+    pathToString (UnknownFsType _ path) = toFilePath path
+    {-# INLINE pathToString #-}
+
+instance IsFilePath SomeBaseUnknownFsType where
+    pathToString (SomeBaseUnknownFsType path) = pathToString path
+    {-# INLINE pathToString #-}
 
 parseSomeDir :: FilePath -> Maybe (SomeBase 'Dir)
 parseSomeDir path =
@@ -131,6 +156,16 @@ data DirOrUnknownFsType b
     deriving anyclass (Hashable)
 
 data SomeBaseDirOrUnknownFsType = forall b. SomeBaseDirOrUnknownFsType (DirOrUnknownFsType b)
+
+instance IsFilePath (DirOrUnknownFsType b) where
+    pathToString = \case
+        DirPath path -> pathToString path
+        UnknownFsTypePath path -> pathToString path
+    {-# INLINE pathToString #-}
+
+instance IsFilePath SomeBaseDirOrUnknownFsType where
+    pathToString (SomeBaseDirOrUnknownFsType path) = pathToString path
+    {-# INLINE pathToString #-}
 
 someBaseUnknownFsTypePath :: SomeBaseUnknownFsType -> SomeBaseDirOrUnknownFsType
 someBaseUnknownFsTypePath (SomeBaseUnknownFsType p) =
