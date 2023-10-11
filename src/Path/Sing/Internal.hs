@@ -15,7 +15,6 @@ Portability :  portable
 module Path.Sing.Internal where
 
 import Control.Applicative ((<|>))
-import Control.Exception (SomeException)
 import Data.Hashable (Hashable (hashWithSalt), hashUsing)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -129,6 +128,9 @@ instance IsFilePath (UnknownFsType b) where
 instance IsFilePath SomeBaseUnknownFsType where
     pathToString (SomeBaseUnknownFsType path) = pathToString path
     {-# INLINE pathToString #-}
+
+forgetFsType :: Path b 'File -> UnknownFsType b
+forgetFsType (Path b _ p) = UnknownFsType b p
 
 parseSomeDir :: FilePath -> Maybe (SomeBase 'Dir)
 parseSomeDir path =
