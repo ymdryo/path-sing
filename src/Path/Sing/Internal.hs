@@ -14,6 +14,7 @@ Portability :  portable
 -}
 module Path.Sing.Internal where
 
+import Control.Applicative ((<|>))
 import Control.Exception (SomeException)
 import Data.Hashable (Hashable (hashWithSalt), hashUsing)
 import Data.Text (Text)
@@ -123,15 +124,37 @@ parseUnknownFsType path = do
     SomeBase (Path b _ p) <- parseSomeFile path
     Just $ SomeBaseUnknownFsType $ UnknownFsType b p
 
+data DirOrUnknownFsType b
+    = DirPath (Path b 'Dir)
+    | UnknownFsTypePath (UnknownFsType b)
+    deriving (Generic, Eq, Ord, Lift)
+    deriving anyclass (Hashable)
+
+data SomeBaseDirOrUnknownFsType = forall b. SomeBaseDirOrUnknownFsType (DirOrUnknownFsType b)
+
+someBaseUnknownFsTypePath :: SomeBaseUnknownFsType -> SomeBaseDirOrUnknownFsType
+someBaseUnknownFsTypePath (SomeBaseUnknownFsType p) =
+    SomeBaseDirOrUnknownFsType $ UnknownFsTypePath p
+
+someBaseDirPath :: SomeBase 'Dir -> SomeBaseDirOrUnknownFsType
+someBaseDirPath (SomeBase p) =
+    SomeBaseDirOrUnknownFsType $ DirPath p
+
+parsePath :: FilePath -> Maybe SomeBaseDirOrUnknownFsType
+parsePath path =
+    (someBaseUnknownFsTypePath <$> parseUnknownFsType path)
+        <|> (someBaseDirPath <$> parseSomeDir path)
+
 -- | Append two paths.
 (</>) :: Path b 'Dir -> Path 'Rel t -> Path b t
 (Path b _ p) </> (Path _ t q) = Path b t (p Path.</> q)
 
-{- | Reinterpret file paths as directory paths.
-     It is also the operation of adding a '/' at the end.
+{- |
+Reinterpret the path as a directory path.
+This can also be described as the action of appending a @\'/\'@ at the end.
 -}
-fileToDirPath :: forall b. Path b 'File -> Path b 'Dir
-fileToDirPath (Path b SFile p) = case b of
+asDir :: forall b. UnknownFsType b -> Path b 'Dir
+asDir (UnknownFsType b p) = case b of
     SRel -> convert Path.parseRelDir
     SAbs -> convert Path.parseAbsDir
   where
@@ -140,8 +163,18 @@ fileToDirPath (Path b SFile p) = case b of
         -> Path b 'Dir
     convert parseDir =
         case parseDir $ Path.toFilePath $ Path.filename p of
-            Left e -> error $ "Failed to convert path type from file to directory: " <> show e
             Right p' -> Path b SDir p'
+            Left e ->
+                error $
+                    "impossible: Failed to convert path type from file to directory: "
+                        <> show e
+
+{- |
+Reinterpret the path as a file path.
+This can also be described as the action of appending a @\'/\'@ at the end.
+-}
+asFile :: forall b. UnknownFsType b -> Path b 'File
+asFile (UnknownFsType b p) = Path b SFile p
 
 -- | A variant of `Path.absfile` that constructs a version of `Path` wrapped in a singleton.
 absfile :: QuasiQuoter
