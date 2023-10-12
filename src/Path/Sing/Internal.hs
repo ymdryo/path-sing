@@ -74,27 +74,35 @@ instance Hashable (SFsType b) where
 -- | A singleton-type wrapper of the original Path type.
 data Path b t
     = Path (SBase b) (SFsType t) (Path.Path (PathBase b) (PathFsType t))
-    deriving stock (Generic, Eq, Ord, Lift)
+    deriving stock (Generic, Eq, Ord, Lift, Show)
     deriving anyclass (Hashable)
 
 -- | Path of some type.
 data SomePath = forall b t. SomePath (Path b t)
 
+deriving instance Show SomePath
+
 -- | Path of some base.
 data SomeBase t = forall b. SomeBase (Path b t)
 
+deriving instance Show (SomeBase t)
+
 -- | Path of some type.
 data SomeFsType b = forall t. SomeFsType (Path b t)
+
+deriving instance Show (SomeFsType t)
 
 {- | Path of some type.
      The difference with `SomeFsType` is that information on whether the path is a file or
     directory is not distinguished here and is ambiguous.
 -}
 data UnknownFsType b = UnknownFsType (SBase b) (Path.Path (PathBase b) Path.File)
-    deriving (Generic, Eq, Ord, Lift)
+    deriving (Generic, Eq, Ord, Lift, Show)
     deriving anyclass (Hashable)
 
 data SomeBaseUnknownFsType = forall b. SomeBaseUnknownFsType (UnknownFsType b)
+
+deriving instance Show SomeBaseUnknownFsType
 
 class IsFilePath a where
     -- | Convert to a String.
@@ -154,10 +162,12 @@ parseUnknownFsType path = do
 data DirOrUnknownFsType b
     = DirPath (Path b 'Dir)
     | UnknownFsTypePath (UnknownFsType b)
-    deriving (Generic, Eq, Ord, Lift)
+    deriving (Generic, Eq, Ord, Lift, Show)
     deriving anyclass (Hashable)
 
 data SomeBaseDirOrUnknownFsType = forall b. SomeBaseDirOrUnknownFsType (DirOrUnknownFsType b)
+
+deriving instance Show SomeBaseDirOrUnknownFsType
 
 instance IsFilePath (DirOrUnknownFsType b) where
     pathToString = \case
