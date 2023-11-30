@@ -14,5 +14,4 @@ module Path.Sing (module Path.Sing.Internal) where
 import Path.Sing.Internal hiding (
     applyExp,
     applyPathWrapper,
-    applyUnknownFsTypeWrapper,
  )

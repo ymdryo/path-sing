@@ -7,6 +7,7 @@
 
 {- |
 Copyright   :  (c) 2023 Yamada Ryo
+               (c) 2015–2018, FP Complete
 License     :  MPL-2.0 (see the file LICENSE)
 Maintainer  :  ymdfield@outlook.jp
 Stability   :  experimental
@@ -15,13 +16,14 @@ Portability :  portable
 module Path.Sing.Internal where
 
 import Control.Applicative ((<|>))
+import Data.Function ((&))
 import Data.Hashable (Hashable (hashWithSalt), hashUsing)
 import Data.Text (Text)
 import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Language.Haskell.TH (Exp, Name, Q, appE, conE)
-import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteExp)
-import Language.Haskell.TH.Syntax (Lift)
+import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteDec, quotePat, quoteType), quoteExp)
+import Language.Haskell.TH.Syntax (Lift, lift)
 import Path (toFilePath)
 import Path qualified
 
@@ -192,6 +194,22 @@ parsePath path =
     (someBaseUnknownFsTypePath <$> parseUnknownFsType path)
         <|> (someBaseDirPath <$> parseSomeDir path)
 
+parseAbsPath :: FilePath -> Maybe (DirOrUnknownFsType 'Abs)
+parseAbsPath path = do
+    SomeBaseDirOrUnknownFsType p <- parsePath path
+    case p of
+        DirPath (Path SAbs _ _) -> Just p
+        UnknownFsTypePath (UnknownFsType SAbs _) -> Just p
+        _ -> Nothing
+
+parseRelPath :: FilePath -> Maybe (DirOrUnknownFsType 'Rel)
+parseRelPath path = do
+    SomeBaseDirOrUnknownFsType p <- parsePath path
+    case p of
+        DirPath (Path SRel _ _) -> Just p
+        UnknownFsTypePath (UnknownFsType SRel _) -> Just p
+        _ -> Nothing
+
 -- | Append two paths.
 (</>) :: Path b 'Dir -> Path 'Rel t -> Path b t
 (Path b _ p) </> (Path _ t q) = Path b t (p Path.</> q)
@@ -230,20 +248,60 @@ absdir = applyPathWrapper 'SAbs 'SDir Path.absdir
 reldir :: QuasiQuoter
 reldir = applyPathWrapper 'SRel 'SDir Path.reldir
 
--- | Construct a `UnknownFsType` `SAbs`.
-abspath :: QuasiQuoter
-abspath = applyUnknownFsTypeWrapper 'SAbs Path.absfile
-
--- | Construct a `UnknownFsType` `SRel`.
-rel :: QuasiQuoter
-rel = applyUnknownFsTypeWrapper 'SRel Path.relfile
-
 applyPathWrapper :: Name -> Name -> QuasiQuoter -> QuasiQuoter
 applyPathWrapper base fsType = applyExp (conE 'Path `appE` conE base `appE` conE fsType `appE`)
 
-applyUnknownFsTypeWrapper :: Name -> QuasiQuoter -> QuasiQuoter
-applyUnknownFsTypeWrapper base = applyExp (conE 'UnknownFsType `appE` conE base `appE`)
+-- | Construct a `DirOrUnknownFsType` `SAbs`.
+abspath :: QuasiQuoter
+abspath = qq \p -> parseAbsPath p & maybe (error $ "Invalid absolute path: " ++ p) lift
+
+-- | Construct a `DirOrUnknownFsType` `SRel`.
+relpath :: QuasiQuoter
+relpath = qq \p -> parseRelPath p & maybe (error $ "Invalid relative path: " ++ p) lift
 
 applyExp :: (Q Exp -> Q Exp) -> QuasiQuoter -> QuasiQuoter
-applyExp f qq@QuasiQuoter {quoteExp} =
-    qq {quoteExp = f . quoteExp}
+applyExp f qq'@QuasiQuoter {quoteExp} =
+    qq' {quoteExp = f . quoteExp}
+
+{-  The code before modification is licensed under the BSD3 License as
+    shown in [1]. The modified code, in its entirety, is licensed under
+    MPL 2.0. When redistributing, please ensure that you do not remove
+    the BSD3 License text as indicated in [1].
+    <https://github.com/commercialhaskell/path/blob/55b2549e6d11b464d8ba918b946970b1cada7451/src/Path/Include.hs#L218C1-L228C4>
+
+    [1] Copyright (c) 2015–2018, FP Complete
+        All rights reserved.
+
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions are met:
+            * Redistributions of source code must retain the above copyright
+            notice, this list of conditions and the following disclaimer.
+            * Redistributions in binary form must reproduce the above copyright
+            notice, this list of conditions and the following disclaimer in the
+            documentation and/or other materials provided with the distribution.
+            * Neither the name of paths nor the
+            names of its contributors may be used to endorse or promote products
+            derived from this software without specific prior written permission.
+
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+        ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+        DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+        DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+        (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+        ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+        (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+        SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-}
+qq :: (String -> Q Exp) -> QuasiQuoter
+qq quoteExp' =
+    QuasiQuoter
+        { quoteExp = quoteExp'
+        , quotePat = \_ ->
+            fail "illegal QuasiQuote (allowed as expression only, used as a pattern)"
+        , quoteType = \_ ->
+            fail "illegal QuasiQuote (allowed as expression only, used as a type)"
+        , quoteDec = \_ ->
+            fail "illegal QuasiQuote (allowed as expression only, used as a declaration)"
+        }
